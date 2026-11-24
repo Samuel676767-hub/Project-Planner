@@ -1,0 +1,1228 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Project Planner</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: three views on one page. Home = setup form + live progress. Trash = list with restore. Project = journal workspace (sections sidebar + blog-style feed). */
+:root {
+  --bg: #EEF1F4;
+  --surface: #FFFFFF;
+  --field: #F7F9FA;
+  --fg: #15202B;
+  --muted: #5B6B7A;
+  --line: #D5DCE3;
+  --accent: #0B6E8A;
+  --accent-fg: #FFFFFF;
+  --danger: #B3261E;
+  --danger-bg: #FBEAE8;
+  --code-bg: #101820;
+  --code-fg: #DCE6EE;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F161D; --surface: #172029; --field: #111A22; --fg: #E6EDF3; --muted: #93A3B2;
+    --line: #2B3844; --accent: #4FB6D3; --accent-fg: #0B1A22; --danger: #FF8A80; --danger-bg: #3A1F1D;
+    --code-bg: #0A1016; --code-fg: #DCE6EE;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F161D; --surface: #172029; --field: #111A22; --fg: #E6EDF3; --muted: #93A3B2;
+  --line: #2B3844; --accent: #4FB6D3; --accent-fg: #0B1A22; --danger: #FF8A80; --danger-bg: #3A1F1D;
+  --code-bg: #0A1016; --code-fg: #DCE6EE;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.5;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 56px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+header.page { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; margin-bottom: 20px; }
+h1 { font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; margin: 0; text-wrap: balance; overflow-wrap: anywhere; }
+header.page p { margin: 4px 0 0; color: var(--muted); max-width: 56ch; }
+h2 { font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 0 0 14px; }
+h3 { margin: 0; }
+.grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+.col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; min-width: 0; }
+.sticky { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px); }
+.fields { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.f { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.span2 { grid-column: 1 / -1; }
+label, .lbl { font-size: 0.8rem; font-weight: 500; color: var(--muted); }
+input, select, textarea {
+  font: inherit; color: var(--fg); background: var(--field); border: 1px solid var(--line);
+  border-radius: 6px; padding: 9px 10px; width: 100%; min-width: 0;
+}
+textarea { min-height: 130px; resize: vertical; line-height: 1.55; }
+input[type="date"] { font-family: var(--font-mono); font-size: 0.9rem; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.invalid { border-color: var(--danger); }
+.err { color: var(--danger); font-size: 0.82rem; margin: 0; }
+.err.box { background: var(--danger-bg); padding: 8px 10px; border-radius: 6px; }
+button { font: inherit; cursor: pointer; }
+.btn { display: inline-block; text-decoration: none; background: var(--accent); color: var(--accent-fg); border: 1px solid var(--accent); border-radius: 6px; padding: 9px 16px; font-weight: 600; line-height: 1.3; }
+.btn.ghost { background: transparent; color: var(--accent); border-color: var(--line); font-weight: 500; }
+.btn.small { padding: 6px 11px; font-size: 0.85rem; }
+.btn.danger { color: var(--danger); }
+.btn:hover { filter: brightness(1.06); }
+.row-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.stages-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-bottom: 4px; }
+.stages-head h2 { margin: 0; }
+.hint { color: var(--muted); font-size: 0.85rem; margin: 0 0 14px; }
+.hint.tight { margin: 4px 0 0; }
+ol.stages { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.stage {
+  display: grid; grid-template-columns: 28px minmax(0, 1fr) 170px 36px; column-gap: 10px; row-gap: 4px; align-items: end;
+  grid-template-areas: "idx name date rm" ". prog prog prog" ". meta meta meta" ". err err err";
+  padding-bottom: 12px; border-bottom: 1px solid var(--line);
+}
+.stage:last-child { border-bottom: 0; padding-bottom: 0; }
+.stage .idx { grid-area: idx; font-family: var(--font-mono); font-size: 0.85rem; color: var(--muted); height: 40px; display: flex; align-items: center; }
+.stage .name { grid-area: name; } .stage .date { grid-area: date; }
+.stage .rm { grid-area: rm; }
+.stage .meta { grid-area: meta; font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); margin: 0; }
+.stage .err { grid-area: err; }
+.icon { width: 36px; height: 40px; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 6px; font-size: 1.15rem; line-height: 1; }
+.icon:hover { color: var(--danger); border-color: var(--danger); }
+.prog { grid-area: prog; display: flex; align-items: center; gap: 10px; }
+.prog label { font-size: 0.8rem; color: var(--muted); }
+.prog input[type="range"] { flex: 1; padding: 0; border: 0; background: transparent; accent-color: var(--accent); height: 28px; }
+.prog output { font-family: var(--font-mono); font-size: 0.85rem; min-width: 4ch; text-align: right; font-variant-numeric: tabular-nums; }
+.bar { position: relative; height: 40px; border-radius: 6px; overflow: hidden; background: var(--field); border: 1px solid var(--line); }
+.seg { position: absolute; top: 0; bottom: 0; border-right: 2px solid var(--surface); background: color-mix(in srgb, var(--accent) 14%, var(--field)); overflow: hidden; }
+.seg .fill { position: absolute; left: 0; top: 0; bottom: 0; }
+.seg.gap { background: repeating-linear-gradient(45deg, var(--line) 0 4px, transparent 4px 9px); border-right: 0; }
+.overall { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 12px; }
+.overall .num { font-family: var(--font-mono); font-size: 2.4rem; font-weight: 500; line-height: 1; font-variant-numeric: tabular-nums; }
+.overall .cap { color: var(--muted); font-size: 0.85rem; }
+.axis { display: flex; justify-content: space-between; gap: 10px; margin-top: 6px; font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+.legend { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.legend li { display: grid; grid-template-columns: 14px minmax(0, 1fr) auto; gap: 10px; align-items: baseline; }
+.sw { width: 14px; height: 14px; border-radius: 3px; align-self: center; }
+.legend .when { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); text-align: right; }
+.legend .nm { overflow-wrap: anywhere; }
+.legend .pc { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); margin-left: 6px; }
+.summary { margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--line); font-size: 0.9rem; color: var(--muted); }
+.summary strong { color: var(--fg); font-weight: 600; }
+.linkline { margin: 10px 0 0; font-size: 0.9rem; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+a.btn { color: var(--accent-fg); }
+a.btn.ghost { color: var(--accent); }
+.empty { color: var(--muted); margin: 0; }
+
+/* project lists (saved + trash) */
+.plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.plist li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.plist li:first-child { padding-top: 0; }
+.plist li:last-child { border-bottom: 0; padding-bottom: 0; }
+.plist .t { font-weight: 600; overflow-wrap: anywhere; }
+.plist .s { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); overflow-wrap: anywhere; }
+.plist .b { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.mini { height: 6px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 14%, var(--field)); margin-top: 8px; max-width: 320px; overflow: hidden; }
+.mini div { height: 100%; background: var(--accent); }
+
+/* top row on subpages */
+.ws-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 16px; }
+.back { text-decoration: none; font-weight: 500; }
+.back:hover { text-decoration: underline; }
+
+/* project workspace */
+.ws-hero { margin-bottom: 20px; }
+.ws-hero .kind { margin: 0 0 6px; font-family: var(--font-mono); font-size: 0.8rem; color: var(--muted); }
+.ws-hero h1 { font-size: 2rem; margin-bottom: 6px; }
+.ws-hero .linkline { margin: 0 0 18px; }
+.ws-grid { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 20px; align-items: start; }
+.secs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.sec { border: 1px solid var(--line); border-radius: 8px; padding: 8px; background: var(--field); }
+.sec.on { border-color: var(--accent); }
+.sec-btn { width: 100%; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; background: transparent; border: 0; padding: 4px 4px; color: var(--fg); text-align: left; font-weight: 600; }
+.sec-btn .nm { overflow-wrap: anywhere; }
+.ct { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); font-weight: 400; }
+.sec .when { font-family: var(--font-mono); font-size: 0.74rem; color: var(--muted); padding: 0 4px; margin: 0; }
+.sec .prog { padding: 2px 4px 0; }
+.composer .fields { margin-top: 2px; }
+.filelist { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.filelist li { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: var(--font-mono); font-size: 0.82rem; background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; }
+.filelist .fn { overflow-wrap: anywhere; min-width: 0; }
+.feed { display: flex; flex-direction: column; gap: 20px; }
+.entry { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px; min-width: 0; }
+.entry .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 8px; }
+.tag { font-size: 0.74rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); border-radius: 999px; padding: 2px 10px; }
+.entry time { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); }
+.entry h3 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.005em; margin-bottom: 8px; overflow-wrap: anywhere; }
+.entry .body { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 68ch; line-height: 1.65; }
+.entry .source { margin: 12px 0 0; font-size: 0.88rem; overflow-wrap: anywhere; }
+.files { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+details.file { border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+details.file summary { cursor: pointer; padding: 8px 12px; font-family: var(--font-mono); font-size: 0.84rem; background: var(--field); overflow-wrap: anywhere; }
+.fbar { display: flex; justify-content: flex-end; padding: 6px 8px; background: var(--code-bg); }
+pre.code { margin: 0; padding: 12px 14px; background: var(--code-bg); color: var(--code-fg); font-family: var(--font-mono); font-size: 0.82rem; line-height: 1.55; overflow-x: auto; max-height: 420px; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(env(safe-area-inset-bottom, 0px) + 18px);
+  background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 8px; font-size: 0.9rem; max-width: calc(100% - 32px);
+  opacity: 0; pointer-events: none; transition: opacity .18s; z-index: 20;
+}
+.toast.on { opacity: 1; }
+.rem-card { margin-bottom: 20px; }
+.rems { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.rem { display: grid; grid-template-columns: 116px minmax(0, 1fr) auto; gap: 8px 14px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.rem:first-child { padding-top: 0; }
+.rem:last-child { border-bottom: 0; padding-bottom: 0; }
+.rem .t { font-weight: 600; overflow-wrap: anywhere; }
+.rem .s { font-family: var(--font-mono); font-size: 0.78rem; color: var(--muted); overflow-wrap: anywhere; }
+.rem .b { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.badge { display: inline-block; text-align: center; font-size: 0.76rem; font-weight: 600; border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.badge.soon { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.badge.today { color: var(--danger); background: var(--danger-bg); }
+@media (max-width: 560px) { .rem { grid-template-columns: minmax(0, 1fr); } .rem .b { justify-content: flex-start; } .rem .badge { justify-self: start; } }
+body { padding-bottom: calc(56px + var(--cookie-h, 0px)); }
+.toast { bottom: calc(env(safe-area-inset-bottom, 0px) + 18px + var(--cookie-h, 0px)); }
+.cookie {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 15;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 20px;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-top: 14px; padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.cookie p { margin: 0; flex: 1 1 320px; font-size: 0.88rem; color: var(--muted); max-width: 70ch; }
+.cookie p strong { color: var(--fg); font-weight: 600; }
+@media (max-width: 860px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .ws-grid { grid-template-columns: minmax(0, 1fr); }
+  .sticky { position: static; }
+}
+@media (max-width: 560px) {
+  .fields { grid-template-columns: minmax(0, 1fr); }
+  .card, .entry { padding: 16px; }
+  .ws-hero h1 { font-size: 1.6rem; }
+  .stage {
+    grid-template-columns: 28px minmax(0, 1fr) 36px;
+    grid-template-areas: "idx name rm" ". date date" ". prog prog" ". meta meta" ". err err";
+  }
+  .plist li { grid-template-columns: minmax(0, 1fr); }
+  .plist .b { justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { .toast { transition: none; } }
+</style>
+
+<div class="wrap">
+
+  <!-- HOME: setup form + live progress + saved projects -->
+  <div id="view-home" hidden>
+    <header class="page">
+      <div>
+        <h1>Project Planner</h1>
+        <p>Name the project, pick its type, set the start and end dates, then add the stages and the day each one ends. Save it, then open it to log your work section by section.</p>
+      </div>
+      <div class="row-actions" style="margin:0">
+        <a class="btn ghost" id="trash-link" href="#trash">Trash</a>
+        <button type="button" class="btn ghost" id="new-btn">New project</button>
+      </div>
+    </header>
+
+    <section class="card rem-card" id="rem-card" aria-labelledby="h-rem" hidden>
+      <h2 id="h-rem">Reminders</h2>
+      <ul class="rems" id="rem-list"></ul>
+    </section>
+
+    <div class="grid">
+      <div class="col">
+        <section class="card" aria-labelledby="h-project">
+          <h2 id="h-project">Project</h2>
+          <div class="fields">
+            <div class="f span2">
+              <label for="p-name">Project name</label>
+              <input id="p-name" type="text" autocomplete="off" placeholder="e.g. Customer Portal Relaunch" maxlength="120">
+              <p class="err" id="name-err" role="alert" hidden></p>
+            </div>
+            <div class="f span2">
+              <label for="p-type">Project type</label>
+              <select id="p-type"></select>
+            </div>
+            <div class="f span2" id="custom-wrap" hidden>
+              <label for="p-custom">Describe the type</label>
+              <input id="p-custom" type="text" autocomplete="off" placeholder="e.g. Documentary film" maxlength="60">
+            </div>
+            <div class="f">
+              <label for="p-start">Start date</label>
+              <input id="p-start" type="date">
+            </div>
+            <div class="f">
+              <label for="p-end">End date</label>
+              <input id="p-end" type="date">
+            </div>
+            <p class="err box span2" id="proj-err" role="alert" hidden></p>
+            <div class="f span2">
+              <label for="p-url">Project link (optional)</label>
+              <input id="p-url" type="url" inputmode="url" autocomplete="off" placeholder="https://example.com/your-project" maxlength="500">
+              <p class="err" id="url-err" role="alert" hidden></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="card" aria-labelledby="h-stages">
+          <div class="stages-head">
+            <h2 id="h-stages">Stages</h2>
+            <button type="button" class="btn ghost small" id="suggest-btn">Use suggested stages for this type</button>
+          </div>
+          <p class="hint">Each stage starts the day after the previous one ends. Stages are listed in the order they happen, and each one becomes a section in the project workspace.</p>
+          <ol class="stages" id="stages"></ol>
+          <p class="err box" id="stages-err" role="alert" hidden style="margin-top:12px"></p>
+          <div class="row-actions">
+            <button type="button" class="btn ghost" id="add-btn">+ Add stage</button>
+            <button type="button" class="btn ghost" id="sort-btn">Sort by end date</button>
+          </div>
+        </section>
+
+        <div class="row-actions" style="margin-top:0">
+          <button type="button" class="btn" id="save-btn">Save project</button>
+        </div>
+      </div>
+
+      <div class="col">
+        <section class="card sticky" aria-labelledby="h-timeline">
+          <h2 id="h-timeline">Progress</h2>
+          <div id="timeline"></div>
+        </section>
+      </div>
+    </div>
+
+    <section class="card" style="margin-top:20px" aria-labelledby="h-saved">
+      <h2 id="h-saved">Saved projects</h2>
+      <div id="saved"></div>
+    </section>
+  </div>
+
+  <!-- TRASH -->
+  <div id="view-trash" hidden>
+    <div class="ws-top"><a class="back" href="#projects">&larr; All projects</a></div>
+    <header class="page">
+      <div>
+        <h1>Trashed projects</h1>
+        <p>A deleted project stays here for 30 days. Restore it before then and it comes back with its stages, progress and journal entries. After 30 days it is removed for good.</p>
+      </div>
+    </header>
+    <section class="card"><div id="trash-list"></div></section>
+  </div>
+
+  <!-- PROJECT WORKSPACE (built when a project is opened) -->
+  <div id="view-project" hidden></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="cookie" id="cookie" role="region" aria-label="Cookie notice" hidden>
+  <p><strong>Cookies and storage.</strong> This app sets one small cookie to remember that you have seen this notice. Your projects, entries and uploaded files are saved in this browser's storage and are not sent to anyone.</p>
+  <button type="button" class="btn" id="cookie-ok">Got it</button>
+</div>
+
+<script>
+(function () {
+  var DAY = 86400000;
+  var STORE_KEY = 'project-planner-v1';
+  var TRASH_KEY = 'project-planner-trash-v1';
+  var TRASH_DAYS = 30;
+  var MAX_FILE = 150 * 1024;
+
+  // Suggested stages per type: [name, fraction of the project span at which the stage ends]
+  // kind decides what the project workspace offers: code uploads, a source field, or a plain journal.
+  var TYPES = {
+    software:     { kind: 'code',     label: 'Software development', stages: [['Discovery', .12], ['Design', .28], ['Build', .65], ['Testing', .85], ['Launch', 1]] },
+    construction: { kind: 'journal',  label: 'Construction', stages: [['Permits and approvals', .12], ['Site preparation', .25], ['Foundation and structure', .55], ['Fit-out', .85], ['Inspection and handover', 1]] },
+    marketing:    { kind: 'journal',  label: 'Marketing campaign', stages: [['Strategy', .15], ['Creative production', .45], ['Campaign live', .85], ['Reporting', 1]] },
+    event:        { kind: 'journal',  label: 'Event', stages: [['Venue and budget', .2], ['Speakers and vendors', .5], ['Promotion and tickets', .85], ['Event day', 1]] },
+    research:     { kind: 'research', label: 'Research study', stages: [['Literature review', .2], ['Data collection', .55], ['Analysis', .8], ['Write-up', 1]] },
+    product:      { kind: 'journal',  label: 'Product launch', stages: [['Positioning', .2], ['Pilot', .5], ['Go-to-market prep', .8], ['Launch', 1]] },
+    renovation:   { kind: 'journal',  label: 'Home renovation', stages: [['Design and quotes', .2], ['Demolition', .35], ['Build and install', .8], ['Finishing and cleanup', 1]] },
+    other:        { kind: 'journal',  label: 'Other', stages: [['Planning', .2], ['Execution', .75], ['Review', 1]] }
+  };
+  var KIND_TEXT = {
+    code:     { prompt: 'What did you build or change?', title: 'e.g. Added the login endpoint' },
+    research: { prompt: 'What did you find or do?',      title: 'e.g. Read the 1921 census returns' },
+    journal:  { prompt: 'What did you do?',              title: 'e.g. Booked the venue' }
+  };
+
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    name: $('p-name'), type: $('p-type'), custom: $('p-custom'), customWrap: $('custom-wrap'),
+    start: $('p-start'), end: $('p-end'), projErr: $('proj-err'), nameErr: $('name-err'), url: $('p-url'), urlErr: $('url-err'),
+    stages: $('stages'), stagesErr: $('stages-err'), timeline: $('timeline'), saved: $('saved'), toast: $('toast'),
+    trashList: $('trash-list'), trashLink: $('trash-link'),
+    vHome: $('view-home'), vTrash: $('view-trash'), vProject: $('view-project')
+  };
+
+  // ---------- helpers ----------
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function parse(s) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s || '')) return null;
+    var a = s.split('-').map(Number);
+    return Date.UTC(a[0], a[1] - 1, a[2]);
+  }
+  function iso(t) { return new Date(t).toISOString().slice(0, 10); }
+  function fmt(t) { return new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' }); }
+  function fmtLocal(ts) { return new Date(ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  function todayIso() { var n = new Date(); return n.getFullYear() + '-' + pad(n.getMonth() + 1) + '-' + pad(n.getDate()); }
+  function days(n) { return n + (n === 1 ? ' day' : ' days'); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); }
+  function clamp(n) { n = Number(n) || 0; return Math.max(0, Math.min(100, n)); }
+  function rid() { return Math.random().toString(36).slice(2, 9) + Date.now().toString(36); }
+  function kb(n) { return n < 1024 ? n + ' B' : (n / 1024).toFixed(n < 10240 ? 1 : 0) + ' KB'; }
+  function checkUrl(v) {
+    v = (v || '').trim();
+    if (!v) return { ok: true, url: '' };
+    var c = /^[a-z][a-z0-9+.-]*:\/\//i.test(v) ? v : 'https://' + v;
+    try {
+      var u = new URL(c);
+      if ((u.protocol !== 'http:' && u.protocol !== 'https:') || (u.hostname.indexOf('.') < 0 && u.hostname !== 'localhost')) return { ok: false, url: '' };
+      return { ok: true, url: u.href };
+    } catch (err) { return { ok: false, url: '' }; }
+  }
+  function hostOf(u) { try { return new URL(u).hostname; } catch (err) { return u; } }
+  function swatch(i, n) {
+    var pct = n <= 1 ? 80 : Math.round(38 + (i / (n - 1)) * 62);
+    return 'color-mix(in srgb, var(--accent) ' + pct + '%, var(--surface))';
+  }
+  function typeLabel(p) { return p.type === 'other' ? ((p.customType || '').trim() || 'Other') : TYPES[p.type].label; }
+  function kindOf(p) { return TYPES[p.type].kind; }
+  function findIn(list, id, deep) {
+    for (var i = 0; i < list.length; i++) { var x = deep ? list[i].rec : list[i]; if (x.id === id) return i; }
+    return -1;
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    els.toast.textContent = msg;
+    els.toast.classList.add('on');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { els.toast.classList.remove('on'); }, 3000);
+  }
+
+  // ---------- storage ----------
+  var saved = [], trash = [];
+  function readList(key) {
+    try { var raw = localStorage.getItem(key); var v = raw ? JSON.parse(raw) : []; return Array.isArray(v) ? v : []; }
+    catch (err) { return []; }
+  }
+  function normalize(rec) {
+    rec.type = TYPES[rec.type] ? rec.type : 'other';
+    rec.customType = rec.customType || '';
+    rec.url = rec.url || '';
+    rec.name = rec.name || 'Untitled project';
+    rec.entries = Array.isArray(rec.entries) ? rec.entries : [];
+    rec.stages = (rec.stages || []).map(function (st) { return { key: st.key || rid(), name: st.name || '', end: st.end || '', pct: clamp(st.pct) }; });
+    rec.entries.forEach(function (en) { en.files = Array.isArray(en.files) ? en.files : []; en.title = en.title || ''; en.body = en.body || ''; en.source = en.source || ''; en.date = en.date || todayIso(); en.createdAt = en.createdAt || Date.now(); });
+    return rec;
+  }
+  function commit() {
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify(saved));
+      localStorage.setItem(TRASH_KEY, JSON.stringify(trash));
+      return true;
+    } catch (err) {
+      toast('Browser storage is full or blocked. Recent changes may not be kept.');
+      return false;
+    }
+  }
+  var commitTimer = null;
+  function commitSoon() { clearTimeout(commitTimer); commitTimer = setTimeout(commit, 400); }
+  function purgeTrash() {
+    var cut = Date.now() - TRASH_DAYS * DAY;
+    var before = trash.length;
+    trash = trash.filter(function (t) { return t.deletedAt > cut; });
+    if (trash.length !== before) commit();
+  }
+
+  // ---------- layout of a saved project (for list cards and the workspace bar) ----------
+  function layout(rec) {
+    var s = parse(rec.start), e = parse(rec.end);
+    var out = { s: s, e: e, total: 0, segs: [], gapDays: 0, overall: 0, planDays: 0 };
+    if (s == null || e == null || e < s) return out;
+    out.total = Math.round((e - s) / DAY) + 1;
+    var prev = null, list = [], done = 0, plan = 0;
+    rec.stages.forEach(function (st) {
+      var t = parse(st.end);
+      if (t == null || t < s || t > e || (prev != null && t <= prev)) return;
+      var from = prev == null ? s : prev + DAY;
+      var len = Math.round((t - from) / DAY) + 1;
+      var pct = clamp(st.pct);
+      list.push({ st: st, from: from, t: t, len: len, pct: pct });
+      done += len * pct / 100; plan += len; prev = t;
+    });
+    list.forEach(function (g, i) {
+      out.segs.push({
+        name: g.st.name.trim() || 'Untitled stage', pct: g.pct, from: g.from, t: g.t, len: g.len,
+        left: ((g.from - s) / DAY) / out.total * 100, width: g.len / out.total * 100, color: swatch(i, list.length)
+      });
+    });
+    if (list.length && list.length === rec.stages.length && list[list.length - 1].t < e) out.gapDays = Math.round((e - list[list.length - 1].t) / DAY);
+    out.planDays = plan;
+    out.overall = plan ? Math.round(done / plan * 100) : 0;
+    return out;
+  }
+  function barHtml(L) {
+    var b = '';
+    L.segs.forEach(function (g) {
+      b += '<div class="seg" style="left:' + g.left.toFixed(3) + '%;width:' + g.width.toFixed(3) + '%" title="' + esc(g.name) + ' ' + g.pct + '%"><div class="fill" style="width:' + g.pct + '%;background:' + g.color + '"></div></div>';
+    });
+    if (L.gapDays) {
+      var last = L.segs[L.segs.length - 1];
+      b += '<div class="seg gap" style="left:' + (last.left + last.width).toFixed(3) + '%;width:' + (L.gapDays / L.total * 100).toFixed(3) + '%" title="Unplanned"></div>';
+    }
+    return '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + L.overall + '" aria-label="Project progress">' + b + '</div>' +
+      '<div class="axis"><span>' + fmt(L.s) + '</span><span>' + fmt(L.e) + '</span></div>';
+  }
+
+  // =====================================================================
+  // HOME: setup form
+  // =====================================================================
+  var uid = 0;
+  function newStage(name, end, pct, key) { return { id: ++uid, key: key || rid(), name: name, end: end || '', pct: clamp(pct) }; }
+  function blankState(withExample) {
+    if (withExample) return { id: null, name: 'Customer Portal Relaunch', type: 'software', customType: '', url: '', start: '2026-12-01', end: '2027-03-31', stages: [], entries: [] };
+    var n = new Date(), t0 = Date.UTC(n.getFullYear(), n.getMonth(), n.getDate());
+    return { id: null, name: '', type: 'software', customType: '', url: '', start: iso(t0), end: iso(t0 + 90 * DAY), stages: [], entries: [] };
+  }
+  var state = blankState(true);
+  var touched = false, attempted = false, urlTouched = false;
+
+  function templateStages() {
+    var s = parse(state.start), e = parse(state.end);
+    var tpl = TYPES[state.type].stages;
+    if (s == null || e == null || e < s) return tpl.map(function (t) { return newStage(t[0], ''); });
+    var total = Math.round((e - s) / DAY), prev = -1;
+    return tpl.map(function (t) {
+      var off = Math.round(t[1] * total);
+      if (off <= prev) off = prev + 1;
+      prev = off;
+      return newStage(t[0], iso(s + Math.min(off, total) * DAY));
+    });
+  }
+
+  function analyze() {
+    var s = parse(state.start), e = parse(state.end);
+    var out = { projErr: null, stages: [], count: 0, rangeOk: false };
+    if (s == null || e == null) out.projErr = 'Choose both a start date and an end date.';
+    else if (e < s) out.projErr = 'The end date must be on or after the start date.';
+    out.rangeOk = !out.projErr;
+    var uc = checkUrl(state.url);
+    out.urlErr = uc.ok ? null : 'Enter a valid web address, like https://example.com/your-project.';
+    out.url = uc.ok ? uc.url : '';
+    var prev = null;
+    state.stages.forEach(function (st, i) {
+      var t = parse(st.end), err = null;
+      var from = i === 0 ? s : (prev != null ? prev + DAY : null);
+      if (t == null) err = 'Pick an end date for this stage.';
+      else if (out.rangeOk && t < s) err = 'This stage ends before the project starts.';
+      else if (out.rangeOk && t > e) err = 'This stage ends after the project ends.';
+      else if (prev != null && t < prev) err = 'Ends before the previous stage. Use "Sort by end date" to fix the order.';
+      else if (prev != null && t === prev) err = 'Same end date as the previous stage. Give each stage its own end date.';
+      var nameErr = (!st.name.trim() && attempted) ? 'Give this stage a name.' : null;
+      out.stages.push({ t: t, from: from, err: err, nameErr: nameErr });
+      if (err) out.count++;
+      if (nameErr) out.count++;
+      if (t != null) prev = t;
+    });
+    if (out.projErr) out.count++;
+    if (out.urlErr) out.count++;
+    return out;
+  }
+
+  function fillTypeSelect() {
+    els.type.innerHTML = Object.keys(TYPES).map(function (k) { return '<option value="' + k + '">' + esc(TYPES[k].label) + '</option>'; }).join('');
+  }
+
+  function renderStages() {
+    els.stages.innerHTML = '';
+    state.stages.forEach(function (st, i) {
+      var li = document.createElement('li');
+      li.className = 'stage';
+      li.dataset.id = st.id;
+      li.innerHTML =
+        '<span class="idx" aria-hidden="true">' + (i + 1) + '</span>' +
+        '<div class="f name"><label for="sn-' + st.id + '">Stage name</label><input id="sn-' + st.id + '" type="text" autocomplete="off" placeholder="Stage name" maxlength="80"></div>' +
+        '<div class="f date"><label for="se-' + st.id + '">Ends on</label><input id="se-' + st.id + '" type="date"></div>' +
+        '<button type="button" class="icon rm" aria-label="Remove stage ' + (i + 1) + '">&times;</button>' +
+        '<div class="prog"><label for="sp-' + st.id + '">Progress</label><input id="sp-' + st.id + '" type="range" min="0" max="100" step="5"><output for="sp-' + st.id + '"></output></div>' +
+        '<p class="meta" data-meta></p><p class="err" data-err role="alert" hidden></p>';
+      var nameIn = li.querySelector('#sn-' + st.id), endIn = li.querySelector('#se-' + st.id), pctIn = li.querySelector('#sp-' + st.id);
+      nameIn.value = st.name;
+      endIn.value = st.end;
+      pctIn.value = st.pct;
+      nameIn.addEventListener('input', function () { st.name = nameIn.value; touched = true; update(); });
+      endIn.addEventListener('input', function () { st.end = endIn.value; touched = true; update(); });
+      pctIn.addEventListener('input', function () { st.pct = Number(pctIn.value) || 0; touched = true; update(); });
+      li.querySelector('.rm').addEventListener('click', function () {
+        state.stages = state.stages.filter(function (x) { return x.id !== st.id; });
+        touched = true; renderStages(); update();
+      });
+      els.stages.appendChild(li);
+    });
+  }
+
+  function update() {
+    var a = analyze();
+    var s = parse(state.start), e = parse(state.end);
+    els.projErr.hidden = !a.projErr;
+    els.projErr.textContent = a.projErr || '';
+    els.start.classList.toggle('invalid', !!a.projErr);
+    els.end.classList.toggle('invalid', !!a.projErr);
+    var urlBad = !!a.urlErr && (attempted || urlTouched);
+    els.urlErr.hidden = !urlBad;
+    els.urlErr.textContent = urlBad ? a.urlErr : '';
+    els.url.classList.toggle('invalid', urlBad);
+    var nameBad = attempted && !state.name.trim();
+    els.nameErr.hidden = !nameBad;
+    els.nameErr.textContent = nameBad ? 'Enter a project name.' : '';
+    els.name.classList.toggle('invalid', nameBad);
+    els.stagesErr.hidden = !(attempted && state.stages.length === 0);
+    els.stagesErr.textContent = 'Add at least one stage.';
+
+    state.stages.forEach(function (st, i) {
+      var li = els.stages.querySelector('[data-id="' + st.id + '"]');
+      if (!li) return;
+      var info = a.stages[i];
+      li.querySelector('output').textContent = st.pct + '%';
+      var meta = li.querySelector('[data-meta]'), err = li.querySelector('[data-err]');
+      var msg = info.err || info.nameErr;
+      err.hidden = !msg; err.textContent = msg || '';
+      li.querySelector('input[type="date"]').classList.toggle('invalid', !!info.err);
+      li.querySelector('input[type="text"]').classList.toggle('invalid', !!info.nameErr);
+      meta.textContent = (!info.err && info.t != null && info.from != null)
+        ? 'Starts ' + fmt(info.from) + ' · ' + days(Math.round((info.t - info.from) / DAY) + 1) : '';
+    });
+    renderPreview(a, s, e);
+    return a;
+  }
+
+  function renderPreview(a, s, e) {
+    if (!a.rangeOk) { els.timeline.innerHTML = '<p class="empty">Set a start and end date to see the progress bar.</p>'; return; }
+    var total = Math.round((e - s) / DAY) + 1;
+    var good = [];
+    state.stages.forEach(function (st, i) {
+      var info = a.stages[i];
+      if (!info.err && info.t != null && info.from != null && info.t >= info.from) good.push({ st: st, info: info });
+    });
+    var bar = '', legend = '', lastEnd = null, doneDays = 0, planDays = 0;
+    good.forEach(function (g, i) {
+      var len = Math.round((g.info.t - g.info.from) / DAY) + 1;
+      var pct = clamp(g.st.pct);
+      doneDays += len * pct / 100; planDays += len;
+      var left = ((g.info.from - s) / DAY) / total * 100, width = len / total * 100;
+      var color = swatch(i, good.length);
+      var nm = g.st.name.trim() || 'Untitled stage';
+      bar += '<div class="seg" style="left:' + left.toFixed(3) + '%;width:' + width.toFixed(3) + '%" title="' + esc(nm) + ' ' + pct + '%"><div class="fill" style="width:' + pct + '%;background:' + color + '"></div></div>';
+      legend += '<li><span class="sw" style="background:' + color + '"></span><span class="nm">' + esc(nm) + '<span class="pc">' + pct + '%</span></span>' +
+        '<span class="when">' + fmt(g.info.from) + ' – ' + fmt(g.info.t) + ' · ' + days(len) + '</span></li>';
+      lastEnd = g.info.t;
+    });
+    var allGood = good.length === state.stages.length && good.length > 0, gapDays = 0;
+    if (allGood && lastEnd < e) {
+      gapDays = Math.round((e - lastEnd) / DAY);
+      var gl = ((lastEnd + DAY - s) / DAY) / total * 100;
+      bar += '<div class="seg gap" style="left:' + gl.toFixed(3) + '%;width:' + (gapDays / total * 100).toFixed(3) + '%" title="Unplanned"></div>';
+    }
+    var overall = planDays ? Math.round(doneDays / planDays * 100) : 0;
+    var summary = '<strong>' + days(total) + '</strong> from ' + fmt(s) + ' to ' + fmt(e) + '.';
+    if (state.stages.length) summary += ' ' + state.stages.length + (state.stages.length === 1 ? ' stage' : ' stages') + ' planned.';
+    if (gapDays) summary += ' The last stage ends ' + days(gapDays) + ' before the project end date (hatched).';
+    else if (allGood) summary += ' The last stage ends on the project end date.';
+    var head = planDays ? '<div class="overall"><span class="num">' + overall + '%</span><span class="cap">complete, weighted by stage length</span></div>' : '';
+    var link = a.url ? '<p class="linkline"><span class="lbl">Project link</span><br><a href="' + esc(a.url) + '" target="_blank" rel="noopener noreferrer">' + esc(a.url) + '</a></p>' : '';
+    els.timeline.innerHTML = head +
+      '<div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="' + overall + '" aria-label="Project progress">' + bar + '</div>' +
+      '<div class="axis"><span>' + fmt(s) + '</span><span>' + fmt(e) + '</span></div>' +
+      (legend ? '<ul class="legend">' + legend + '</ul>' : '<p class="empty" style="margin-top:14px">Add stages with end dates to fill the bar.</p>') +
+      '<p class="summary">' + summary + '</p>' + link;
+  }
+
+  function syncForm() {
+    els.name.value = state.name;
+    els.type.value = state.type;
+    els.custom.value = state.customType;
+    els.customWrap.hidden = state.type !== 'other';
+    els.url.value = state.url || '';
+    els.start.value = state.start;
+    els.end.value = state.end;
+  }
+
+  function renderNav() {
+    els.trashLink.textContent = 'Trash' + (trash.length ? ' (' + trash.length + ')' : '');
+  }
+
+  function renderSaved() {
+    renderReminders();
+    if (!saved.length) {
+      els.saved.innerHTML = '<p class="empty">Nothing saved yet. Fill in the form above and save it, then open the project to log your work.</p>';
+      return;
+    }
+    els.saved.innerHTML = '<ul class="plist">' + saved.map(function (p) {
+      var L = layout(p);
+      var link = p.url ? '<div class="s"><a href="' + esc(p.url) + '" target="_blank" rel="noopener noreferrer">' + esc(hostOf(p.url)) + '</a></div>' : '';
+      return '<li><div><div class="t">' + esc(p.name) + '</div>' +
+        '<div class="s">' + esc(typeLabel(p)) + ' · ' + fmt(parse(p.start)) + ' – ' + fmt(parse(p.end)) + ' · ' + p.stages.length + (p.stages.length === 1 ? ' stage' : ' stages') +
+        ' · ' + p.entries.length + (p.entries.length === 1 ? ' entry' : ' entries') + ' · ' + L.overall + '% complete</div>' + link +
+        '<div class="mini" aria-hidden="true"><div style="width:' + L.overall + '%"></div></div></div>' +
+        '<div class="b"><a class="btn small" href="#project-' + p.id + '">Open</a>' +
+        '<button type="button" class="btn ghost small" data-edit="' + p.id + '">Edit setup</button>' +
+        '<button type="button" class="btn ghost small danger" data-del="' + p.id + '">Move to trash</button></div></li>';
+    }).join('') + '</ul>';
+  }
+
+  function moveToTrash(id) {
+    var i = findIn(saved, id, false);
+    if (i < 0) return null;
+    var rec = saved.splice(i, 1)[0];
+    trash.unshift({ deletedAt: Date.now(), rec: rec });
+    if (state.id === id) state.id = null;
+    commit();
+    return rec;
+  }
+  function editRecord(id) {
+    var i = findIn(saved, id, false);
+    if (i < 0) return;
+    state = JSON.parse(JSON.stringify(saved[i]));
+    state.stages = state.stages.map(function (st) { return newStage(st.name, st.end, st.pct, st.key); });
+    touched = true; attempted = false; urlTouched = false;
+  }
+
+  els.saved.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button');
+    if (!b) return;
+    if (b.dataset.edit) {
+      editRecord(Number(b.dataset.edit));
+      syncForm(); renderStages(); update();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast('Editing "' + state.name + '". Save to keep your changes.');
+    } else if (b.dataset.del) {
+      var rec = moveToTrash(Number(b.dataset.del));
+      if (rec) { renderSaved(); renderNav(); toast('Moved to trash. You can restore it for 30 days.'); }
+    }
+  });
+
+  els.name.addEventListener('input', function () { state.name = els.name.value; update(); });
+  els.custom.addEventListener('input', function () { state.customType = els.custom.value; });
+  els.url.addEventListener('input', function () { state.url = els.url.value; update(); });
+  els.url.addEventListener('blur', function () { urlTouched = true; update(); });
+  els.type.addEventListener('change', function () {
+    state.type = els.type.value;
+    els.customWrap.hidden = state.type !== 'other';
+    if (!touched) { state.stages = templateStages(); renderStages(); }
+    update();
+  });
+  function onDates() {
+    state.start = els.start.value; state.end = els.end.value;
+    if (!touched) { state.stages = templateStages(); renderStages(); }
+    update();
+  }
+  els.start.addEventListener('input', onDates);
+  els.end.addEventListener('input', onDates);
+
+  $('suggest-btn').addEventListener('click', function () {
+    state.stages = templateStages(); touched = false; renderStages(); update();
+    toast('Suggested stages applied.');
+  });
+  $('add-btn').addEventListener('click', function () {
+    var e = parse(state.end);
+    var last = state.stages.length ? parse(state.stages[state.stages.length - 1].end) : null;
+    var next = '';
+    if (last != null) { var d = last + 7 * DAY; if (e != null && d > e) d = e; next = iso(d); }
+    else if (e != null) next = iso(e);
+    var st = newStage('', next);
+    state.stages.push(st); touched = true;
+    renderStages(); update();
+    var inp = $('sn-' + st.id); if (inp) inp.focus();
+  });
+  $('sort-btn').addEventListener('click', function () {
+    state.stages.sort(function (a, b) {
+      var x = parse(a.end), y = parse(b.end);
+      if (x == null && y == null) return 0;
+      if (x == null) return 1;
+      if (y == null) return -1;
+      return x - y;
+    });
+    touched = true; renderStages(); update();
+  });
+  $('new-btn').addEventListener('click', function () {
+    state = blankState(false);
+    state.stages = templateStages(); touched = false; attempted = false; urlTouched = false;
+    syncForm(); renderStages(); update();
+    els.name.focus();
+  });
+  $('save-btn').addEventListener('click', function () {
+    attempted = true;
+    var a = update();
+    var problems = a.count + (state.name.trim() ? 0 : 1) + (state.stages.length ? 0 : 1);
+    update();
+    if (problems > 0) {
+      toast('Fix ' + problems + (problems === 1 ? ' issue' : ' issues') + ' before saving.');
+      var bad = document.querySelector('#view-home .invalid');
+      if (bad) bad.focus();
+      return;
+    }
+    var rec = {
+      id: state.id, name: state.name.trim(), type: state.type, customType: state.customType, url: a.url || '',
+      start: state.start, end: state.end, entries: state.entries || [],
+      stages: state.stages.map(function (st) { return { key: st.key, name: st.name.trim(), end: st.end, pct: clamp(st.pct) }; })
+    };
+    if (rec.id == null) rec.id = Date.now();
+    var idx = findIn(saved, rec.id, false);
+    if (idx >= 0) saved[idx] = rec; else saved.unshift(rec);
+    state.id = rec.id;
+    state.entries = rec.entries;
+    commit(); renderSaved(); renderNav();
+    toast('Saved "' + rec.name + '". Open it from Saved projects to log your work.');
+  });
+
+  // =====================================================================
+  // TRASH
+  // =====================================================================
+  var pendingForever = null;
+  function renderTrash() {
+    if (!trash.length) {
+      els.trashList.innerHTML = '<p class="empty">The trash is empty. Projects you delete appear here and can be restored for 30 days.</p>';
+      return;
+    }
+    els.trashList.innerHTML = '<ul class="plist">' + trash.map(function (t) {
+      var p = t.rec;
+      var left = Math.max(0, Math.ceil((t.deletedAt + TRASH_DAYS * DAY - Date.now()) / DAY));
+      var confirming = pendingForever === p.id;
+      return '<li><div><div class="t">' + esc(p.name) + '</div>' +
+        '<div class="s">' + esc(typeLabel(p)) + ' · ' + p.stages.length + (p.stages.length === 1 ? ' stage' : ' stages') + ' · ' + p.entries.length + (p.entries.length === 1 ? ' entry' : ' entries') + '</div>' +
+        '<div class="s">Deleted ' + fmtLocal(t.deletedAt) + ' · restore by ' + fmtLocal(t.deletedAt + TRASH_DAYS * DAY) + ' (' + days(left) + ' left)</div></div>' +
+        '<div class="b"><button type="button" class="btn small" data-restore="' + p.id + '">Restore</button>' +
+        '<button type="button" class="btn ghost small danger" data-forever="' + p.id + '">' + (confirming ? 'Confirm delete forever' : 'Delete forever') + '</button></div></li>';
+    }).join('') + '</ul>';
+  }
+  els.trashList.addEventListener('click', function (ev) {
+    var b = ev.target.closest('button');
+    if (!b) return;
+    if (b.dataset.restore) {
+      var id = Number(b.dataset.restore), i = findIn(trash, id, true);
+      if (i < 0) return;
+      var rec = normalize(trash.splice(i, 1)[0].rec);
+      if (findIn(saved, rec.id, false) >= 0) rec.id = Date.now();
+      saved.unshift(rec);
+      pendingForever = null;
+      commit(); renderTrash(); renderNav();
+      toast('Restored "' + rec.name + '".');
+    } else if (b.dataset.forever) {
+      var fid = Number(b.dataset.forever);
+      if (pendingForever === fid) {
+        var j = findIn(trash, fid, true);
+        if (j >= 0) trash.splice(j, 1);
+        pendingForever = null; commit(); toast('Deleted forever.'); renderNav();
+      } else pendingForever = fid;
+      renderTrash();
+    }
+  });
+
+  // =====================================================================
+  // PROJECT WORKSPACE
+  // =====================================================================
+  var ws = { id: null, filter: 'all', editing: null, files: [], pendingDel: null };
+  function cur() { var i = findIn(saved, ws.id, false); return i < 0 ? null : saved[i]; }
+  function sectionKey(rec, en) {
+    for (var i = 0; i < rec.stages.length; i++) if (rec.stages[i].key === en.stage) return en.stage;
+    return 'general';
+  }
+  function sectionName(rec, key) {
+    for (var i = 0; i < rec.stages.length; i++) if (rec.stages[i].key === key) return rec.stages[i].name.trim() || 'Untitled stage';
+    return 'General';
+  }
+
+  function buildWorkspace(rec) {
+    var kind = kindOf(rec), tx = KIND_TEXT[kind];
+    var sourceField = kind === 'research'
+      ? '<div class="f span2"><label for="w-source">Source or reference (optional)</label><input id="w-source" type="text" autocomplete="off" maxlength="300" placeholder="e.g. National Archives, CO 273/120, or a web address"></div>' : '';
+    var fileField = kind === 'code'
+      ? '<div class="f span2"><label for="w-files">Upload code files</label><input id="w-files" type="file" multiple>' +
+        '<p class="hint tight">Text and code files up to 150 KB each. They are kept in this browser and shown with each entry.</p><ul class="filelist" id="w-filelist"></ul></div>' : '';
+    els.vProject.innerHTML =
+      '<div class="ws-top"><a class="back" href="#projects">&larr; All projects</a>' +
+        '<div class="row-actions" style="margin:0"><button type="button" class="btn ghost small" id="w-edit">Edit setup</button>' +
+        '<button type="button" class="btn ghost small danger" id="w-trash">Move to trash</button></div></div>' +
+      '<section class="card ws-hero"><p class="kind" id="w-kind"></p><h1 id="w-name"></h1><div id="w-link"></div><div id="w-progress"></div></section>' +
+      '<div id="w-rem"></div><div class="ws-grid">' +
+        '<aside class="card" aria-labelledby="w-h-secs"><h2 id="w-h-secs">Sections</h2><ul class="secs" id="w-secs"></ul></aside>' +
+        '<div class="col">' +
+          '<section class="card composer" aria-labelledby="w-h-new"><h2 id="w-h-new">New entry</h2><div class="fields">' +
+            '<div class="f"><label for="w-section">Section</label><select id="w-section"></select></div>' +
+            '<div class="f"><label for="w-date">Date</label><input id="w-date" type="date"></div>' +
+            '<div class="f span2"><label for="w-title">Title</label><input id="w-title" type="text" autocomplete="off" maxlength="140" placeholder="' + esc(tx.title) + '"></div>' +
+            '<div class="f span2"><label for="w-body">' + esc(tx.prompt) + '</label><textarea id="w-body"></textarea></div>' +
+            sourceField + fileField +
+            '<p class="err box span2" id="w-err" role="alert" hidden></p>' +
+          '</div><div class="row-actions"><button type="button" class="btn" id="w-post">Post entry</button><button type="button" class="btn ghost" id="w-cancel" hidden>Cancel edit</button></div></section>' +
+          '<div class="feed" id="w-feed"></div>' +
+        '</div>' +
+      '</div>';
+    $('w-date').value = todayIso();
+
+    $('w-edit').addEventListener('click', function () { editRecord(ws.id); location.hash = 'projects'; if (location.hash === '#projects') route(); });
+    $('w-trash').addEventListener('click', function () {
+      var r = moveToTrash(ws.id);
+      if (r) { toast('Moved to trash. You can restore it for 30 days.'); location.hash = 'projects'; }
+    });
+    $('w-post').addEventListener('click', postEntry);
+    $('w-cancel').addEventListener('click', function () { resetComposer(); });
+    var fi = $('w-files');
+    if (fi) fi.addEventListener('change', onFilesPicked);
+    $('w-secs').addEventListener('click', function (ev) {
+      var b = ev.target.closest('button[data-f]');
+      if (!b) return;
+      ws.filter = b.dataset.f;
+      var r = cur(); if (!r) return;
+      if (ws.filter !== 'all') $('w-section').value = ws.filter;
+      renderSecs(r); renderFeed(r);
+    });
+    $('w-secs').addEventListener('input', function (ev) {
+      var t = ev.target;
+      if (!t || t.type !== 'range') return;
+      var r = cur(); if (!r) return;
+      for (var i = 0; i < r.stages.length; i++) if (r.stages[i].key === t.dataset.key) r.stages[i].pct = clamp(t.value);
+      t.parentNode.querySelector('output').textContent = clamp(t.value) + '%';
+      renderProgress(r); renderWsReminders(r); commitSoon();
+    });
+    $('w-feed').addEventListener('click', onFeedClick);
+  }
+
+  function renderHeader(rec) {
+    $('w-kind').textContent = typeLabel(rec) + ' · ' + fmt(parse(rec.start)) + ' – ' + fmt(parse(rec.end));
+    $('w-name').textContent = rec.name;
+    $('w-link').innerHTML = rec.url ? '<p class="linkline"><a href="' + esc(rec.url) + '" target="_blank" rel="noopener noreferrer">' + esc(rec.url) + '</a></p>' : '';
+  }
+  function renderProgress(rec) {
+    var L = layout(rec);
+    $('w-progress').innerHTML = L.total
+      ? (L.planDays ? '<div class="overall"><span class="num">' + L.overall + '%</span><span class="cap">complete across ' + rec.stages.length + (rec.stages.length === 1 ? ' section' : ' sections') + '</span></div>' : '') + barHtml(L)
+      : '';
+  }
+  function renderSecs(rec) {
+    var counts = { all: rec.entries.length };
+    rec.entries.forEach(function (en) { var k = sectionKey(rec, en); counts[k] = (counts[k] || 0) + 1; });
+    var html = '<li class="sec' + (ws.filter === 'all' ? ' on' : '') + '"><button type="button" class="sec-btn" data-f="all"><span class="nm">All entries</span><span class="ct">' + counts.all + '</span></button></li>';
+    rec.stages.forEach(function (st) {
+      var t = parse(st.end);
+      var nm = st.name.trim() || 'Untitled stage';
+      html += '<li class="sec' + (ws.filter === st.key ? ' on' : '') + '"><button type="button" class="sec-btn" data-f="' + esc(st.key) + '"><span class="nm">' + esc(nm) + '</span><span class="ct">' + (counts[st.key] || 0) + '</span></button>' +
+        '<p class="when">Ends ' + (t != null ? fmt(t) : 'no date') + dueLabel(st) + '</p>' +
+        '<div class="prog"><input type="range" min="0" max="100" step="5" value="' + clamp(st.pct) + '" data-key="' + esc(st.key) + '" aria-label="Progress for ' + esc(nm) + '"><output>' + clamp(st.pct) + '%</output></div></li>';
+    });
+    if (counts.general) html += '<li class="sec' + (ws.filter === 'general' ? ' on' : '') + '"><button type="button" class="sec-btn" data-f="general"><span class="nm">General</span><span class="ct">' + counts.general + '</span></button></li>';
+    $('w-secs').innerHTML = html;
+    var sel = $('w-section'), keep = sel.value;
+    sel.innerHTML = rec.stages.map(function (st) { return '<option value="' + esc(st.key) + '">' + esc(st.name.trim() || 'Untitled stage') + '</option>'; }).join('') + '<option value="general">General</option>';
+    if (keep && sel.querySelector('option[value="' + keep + '"]')) sel.value = keep;
+    else {
+      var pick = 'general';
+      for (var i = 0; i < rec.stages.length; i++) if (clamp(rec.stages[i].pct) < 100) { pick = rec.stages[i].key; break; }
+      sel.value = pick;
+    }
+  }
+
+  function sourceHtml(s) {
+    return /^https?:\/\//i.test(s) ? '<a href="' + esc(s) + '" target="_blank" rel="noopener noreferrer">' + esc(s) + '</a>' : esc(s);
+  }
+  function entryHtml(rec, en) {
+    var confirming = ws.pendingDel === en.id;
+    var files = en.files.length ? '<div class="files">' + en.files.map(function (f, i) {
+      return '<details class="file"><summary>' + esc(f.name) + ' · ' + kb(f.size) + '</summary>' +
+        '<div class="fbar"><button type="button" class="btn ghost small" data-copy="' + esc(en.id) + ':' + i + '">Copy</button></div>' +
+        '<pre class="code"><code>' + esc(f.text) + '</code></pre></details>';
+    }).join('') + '</div>' : '';
+    return '<article class="entry" data-id="' + esc(en.id) + '"><div class="meta"><span class="tag">' + esc(sectionName(rec, sectionKey(rec, en))) + '</span><time>' + fmt(parse(en.date) || Date.now()) + '</time></div>' +
+      '<h3>' + esc(en.title.trim() || 'Untitled entry') + '</h3>' +
+      (en.body ? '<div class="body">' + esc(en.body) + '</div>' : '') +
+      (en.source ? '<p class="source"><span class="lbl">Source</span> ' + sourceHtml(en.source) + '</p>' : '') + files +
+      '<div class="actions"><button type="button" class="btn ghost small" data-act="edit">Edit</button>' +
+      '<button type="button" class="btn ghost small danger" data-act="del">' + (confirming ? 'Confirm delete' : 'Delete') + '</button></div></article>';
+  }
+  function renderFeed(rec) {
+    var list = rec.entries.filter(function (en) { return ws.filter === 'all' || sectionKey(rec, en) === ws.filter; });
+    list.sort(function (a, b) { return (b.date < a.date ? -1 : b.date > a.date ? 1 : 0) || (b.createdAt - a.createdAt); });
+    $('w-feed').innerHTML = list.length ? list.map(function (en) { return entryHtml(rec, en); }).join('')
+      : '<div class="card"><p class="empty">' + (rec.entries.length ? 'No entries in this section yet.' : 'No entries yet. Write the first one above to start the project journal.') + '</p></div>';
+  }
+
+  function onFeedClick(ev) {
+    var rec = cur(); if (!rec) return;
+    var b = ev.target.closest('button');
+    if (!b) return;
+    if (b.dataset.copy) {
+      var parts = b.dataset.copy.split(':'), en = rec.entries.filter(function (x) { return x.id === parts[0]; })[0];
+      var f = en && en.files[Number(parts[1])];
+      if (!f) return;
+      var pre = b.closest('details').querySelector('pre');
+      var ok = false;
+      try { navigator.clipboard.writeText(f.text).then(function () { toast('Copied ' + f.name + '.'); }, function () { selectNode(pre); toast('Could not copy. The code is selected, press copy on your keyboard.'); }); ok = true; } catch (err) {}
+      if (!ok) { selectNode(pre); toast('Could not copy. The code is selected, press copy on your keyboard.'); }
+      return;
+    }
+    var art = b.closest('.entry');
+    if (!art) return;
+    var id = art.dataset.id;
+    if (b.dataset.act === 'edit') startEdit(rec, id);
+    else if (b.dataset.act === 'del') {
+      if (ws.pendingDel === id) {
+        rec.entries = rec.entries.filter(function (x) { return x.id !== id; });
+        ws.pendingDel = null;
+        if (ws.editing === id) resetComposer();
+        commit(); renderSecs(rec); renderFeed(rec); toast('Entry deleted.');
+      } else { ws.pendingDel = id; renderFeed(rec); }
+    }
+  }
+  function selectNode(node) {
+    try { var r = document.createRange(); r.selectNodeContents(node); var s = window.getSelection(); s.removeAllRanges(); s.addRange(r); } catch (err) {}
+  }
+
+  function renderFileList() {
+    var ul = $('w-filelist');
+    if (!ul) return;
+    ul.innerHTML = ws.files.map(function (f, i) {
+      return '<li><span class="fn">' + esc(f.name) + ' · ' + kb(f.size) + '</span><button type="button" class="btn ghost small" data-rmfile="' + i + '">Remove</button></li>';
+    }).join('');
+    ul.onclick = function (ev) {
+      var b = ev.target.closest('button[data-rmfile]');
+      if (!b) return;
+      ws.files.splice(Number(b.dataset.rmfile), 1);
+      renderFileList();
+    };
+  }
+  function composerError(msg) { var e = $('w-err'); e.hidden = !msg; e.textContent = msg || ''; }
+  function onFilesPicked(ev) {
+    var input = ev.target, list = Array.prototype.slice.call(input.files || []);
+    composerError('');
+    list.forEach(function (f) {
+      if (f.size > MAX_FILE) { composerError(f.name + ' is larger than 150 KB, so it was not added.'); return; }
+      var r = new FileReader();
+      r.onload = function () {
+        var t = String(r.result);
+        if (t.indexOf('\u0000') >= 0) { composerError(f.name + ' looks like a binary file. Only text and code files can be added.'); return; }
+        ws.files.push({ name: f.name, size: f.size, text: t });
+        renderFileList();
+      };
+      r.onerror = function () { composerError('Could not read ' + f.name + '.'); };
+      r.readAsText(f);
+    });
+    input.value = '';
+  }
+
+  function resetComposer() {
+    ws.editing = null; ws.files = [];
+    $('w-title').value = ''; $('w-body').value = '';
+    var src = $('w-source'); if (src) src.value = '';
+    $('w-date').value = todayIso();
+    $('w-h-new').textContent = 'New entry';
+    $('w-post').textContent = 'Post entry';
+    $('w-cancel').hidden = true;
+    composerError('');
+    renderFileList();
+  }
+  function startEdit(rec, id) {
+    var en = rec.entries.filter(function (x) { return x.id === id; })[0];
+    if (!en) return;
+    ws.editing = id;
+    ws.files = en.files.map(function (f) { return { name: f.name, size: f.size, text: f.text }; });
+    $('w-section').value = sectionKey(rec, en);
+    $('w-date').value = en.date;
+    $('w-title').value = en.title;
+    $('w-body').value = en.body;
+    var src = $('w-source'); if (src) src.value = en.source;
+    $('w-h-new').textContent = 'Edit entry';
+    $('w-post').textContent = 'Save changes';
+    $('w-cancel').hidden = false;
+    composerError('');
+    renderFileList();
+    $('w-title').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    $('w-title').focus();
+  }
+  function postEntry() {
+    var rec = cur(); if (!rec) return;
+    var title = $('w-title').value.trim(), body = $('w-body').value.trim();
+    var src = $('w-source'), source = src ? src.value.trim() : '';
+    if (!title && !body && !ws.files.length) { composerError('Write a title or some notes, or attach a file, before posting.'); return; }
+    composerError('');
+    var date = parse($('w-date').value) != null ? $('w-date').value : todayIso();
+    var section = $('w-section').value;
+    var files = ws.files.map(function (f) { return { name: f.name, size: f.size, text: f.text }; });
+    if (ws.editing) {
+      var en = rec.entries.filter(function (x) { return x.id === ws.editing; })[0];
+      if (en) { en.stage = section; en.date = date; en.title = title; en.body = body; en.source = source; en.files = files; }
+      toast('Entry updated.');
+    } else {
+      rec.entries.push({ id: rid(), stage: section, date: date, title: title, body: body, source: source, files: files, createdAt: Date.now() });
+      toast('Entry posted.');
+    }
+    var keepSection = section;
+    commit();
+    resetComposer();
+    $('w-section').value = keepSection;
+    renderSecs(rec); renderFeed(rec);
+  }
+
+  function showProject(rec) {
+    ws = { id: rec.id, filter: 'all', editing: null, files: [], pendingDel: null };
+    buildWorkspace(rec);
+    renderHeader(rec); renderProgress(rec); renderWsReminders(rec); renderSecs(rec); renderFeed(rec);
+  }
+
+  // =====================================================================
+  // ROUTER (hash: empty or #projects, #trash, #project-<id>)
+  // =====================================================================
+  function setView(name) {
+    els.vHome.hidden = name !== 'home';
+    els.vTrash.hidden = name !== 'trash';
+    els.vProject.hidden = name !== 'project';
+  }
+  function showHome() {
+    setView('home');
+    syncForm(); renderStages(); update(); renderSaved(); renderNav();
+  }
+  function route() {
+    purgeTrash();
+    var h = (location.hash || '').replace(/^#/, '');
+    var m = /^project-(\d+)$/.exec(h);
+    if (h === 'trash') { pendingForever = null; setView('trash'); renderTrash(); }
+    else if (m) {
+      var i = findIn(saved, Number(m[1]), false);
+      if (i >= 0) { setView('project'); showProject(saved[i]); }
+      else { toast('That project is not saved in this browser.'); showHome(); }
+    } else showHome();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', route);
+
+  // ---------- reminders: 3 days before a section's end date, and on the end date ----------
+  var DISMISS_KEY = 'project-planner-dismissed-v1';
+  var dismissed = {};
+  function loadDismissed() {
+    try { var r = JSON.parse(localStorage.getItem(DISMISS_KEY) || '{}'); dismissed = (r && typeof r === 'object' && !Array.isArray(r)) ? r : {}; }
+    catch (err) { dismissed = {}; }
+  }
+  function saveDismissed() { try { localStorage.setItem(DISMISS_KEY, JSON.stringify(dismissed)); } catch (err) {} }
+  function daysLeft(st) {
+    var t = parse(st.end);
+    return t == null ? null : Math.round((t - parse(todayIso())) / DAY);
+  }
+  function dueLabel(st) {
+    var left = daysLeft(st);
+    if (left == null || clamp(st.pct) >= 100) return '';
+    if (left === 0) return ' · Due today';
+    return left >= 1 && left <= 3 ? ' · Due in ' + days(left) : '';
+  }
+  function remindersFor(rec) {
+    var out = [];
+    rec.stages.forEach(function (st) {
+      var left = daysLeft(st);
+      if (left == null || clamp(st.pct) >= 100) return;
+      var kind = left === 0 ? 'today' : (left >= 1 && left <= 3 ? 'soon' : null);
+      if (!kind) return;
+      var id = rec.id + ':' + st.key + ':' + st.end + ':' + kind;
+      if (dismissed[id]) return;
+      out.push({ id: id, rec: rec, st: st, left: left, kind: kind });
+    });
+    return out;
+  }
+  function allReminders() {
+    var out = [];
+    saved.forEach(function (r) { out = out.concat(remindersFor(r)); });
+    out.sort(function (a, b) { return a.left - b.left; });
+    return out;
+  }
+  function reminderItems(list, showProject) {
+    return list.map(function (r) {
+      var nm = r.st.name.trim() || 'Untitled stage';
+      var badge = r.kind === 'today' ? 'Due today' : 'Due in ' + days(r.left);
+      return '<li class="rem"><span class="badge ' + r.kind + '">' + badge + '</span>' +
+        '<div><div class="t">' + esc(nm) + (showProject ? ' <span class="s">in ' + esc(r.rec.name) + '</span>' : '') + '</div>' +
+        '<div class="s">Ends ' + fmt(parse(r.st.end)) + ' · ' + clamp(r.st.pct) + '% done</div></div>' +
+        '<div class="b">' + (showProject ? '<a class="btn small" href="#project-' + r.rec.id + '">Open</a>' : '') +
+        '<button type="button" class="btn ghost small" data-dismiss="' + esc(r.id) + '">Dismiss</button></div></li>';
+    }).join('');
+  }
+  function renderReminders() {
+    var list = allReminders(), card = $('rem-card');
+    card.hidden = !list.length;
+    if (!list.length) return;
+    $('h-rem').textContent = 'Reminders (' + list.length + ')';
+    $('rem-list').innerHTML = reminderItems(list, true);
+  }
+  function renderWsReminders(rec) {
+    var box = $('w-rem');
+    if (!box) return;
+    var list = remindersFor(rec);
+    box.innerHTML = list.length
+      ? '<section class="card rem-card" aria-labelledby="w-h-rem"><h2 id="w-h-rem">Reminders (' + list.length + ')</h2><ul class="rems">' + reminderItems(list, false) + '</ul></section>'
+      : '';
+  }
+  function onDismiss(ev) {
+    var b = ev.target.closest('button[data-dismiss]');
+    if (!b) return;
+    dismissed[b.dataset.dismiss] = 1;
+    saveDismissed();
+    renderReminders();
+    var r = cur();
+    if (!els.vProject.hidden && r) renderWsReminders(r);
+  }
+  $('rem-list').addEventListener('click', onDismiss);
+  els.vProject.addEventListener('click', function (ev) { if (ev.target.closest('#w-rem')) onDismiss(ev); });
+
+  // re-check when the day changes while the page is open, or when the tab comes back into view
+  var lastDay = todayIso();
+  function checkDay() {
+    var d = todayIso();
+    if (d === lastDay) return;
+    lastDay = d;
+    renderReminders();
+    var r = cur();
+    if (!els.vProject.hidden && r) { renderWsReminders(r); renderSecs(r); }
+  }
+  setInterval(checkDay, 60000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) checkDay(); });
+
+  // ---------- cookie notice ----------
+  var COOKIE = 'planner_cookie_notice';
+  function cookieSet() {
+    try { return document.cookie.split('; ').indexOf(COOKIE + '=accepted') >= 0; } catch (err) { return false; }
+  }
+  function noticeAccepted() {
+    if (cookieSet()) return true;
+    try { return localStorage.getItem(COOKIE) === '1'; } catch (err) { return false; }
+  }
+  function setCookieHeight(px) { document.documentElement.style.setProperty('--cookie-h', px + 'px'); }
+  var cookieBar = $('cookie');
+  function showCookieNotice() {
+    if (noticeAccepted()) return;
+    cookieBar.hidden = false;
+    setCookieHeight(cookieBar.offsetHeight);
+  }
+  window.addEventListener('resize', function () { if (!cookieBar.hidden) setCookieHeight(cookieBar.offsetHeight); });
+  $('cookie-ok').addEventListener('click', function () {
+    try { document.cookie = COOKIE + '=accepted; max-age=' + (60 * 60 * 24 * 180) + '; path=/; SameSite=Lax'; } catch (err) {}
+    try { localStorage.setItem(COOKIE, '1'); } catch (err) {}
+    cookieBar.hidden = true;
+    setCookieHeight(0);
+  });
+
+  // ---------- start ----------
+  fillTypeSelect();
+  saved = readList(STORE_KEY).map(normalize);
+  trash = readList(TRASH_KEY).filter(function (t) { return t && t.rec && typeof t.deletedAt === 'number'; }).map(function (t) { t.rec = normalize(t.rec); return t; });
+  state.stages = templateStages();
+  if (state.stages[0]) state.stages[0].pct = 100;   // example progress so the bar is filled on first view
+  if (state.stages[1]) state.stages[1].pct = 60;
+  touched = true;
+  loadDismissed();
+  route();
+  showCookieNotice();
+})();
+</script>
+
+</body></html>
